@@ -12,16 +12,25 @@ module cpu (
   output logic [31:0] reg_data_for_dbg
 );
 
+  logic [31:0] pc = 32'b0;
+  always_ff @(posedge clk) begin
+    if (rst) begin
+      pc <= 32'b0;
+    end else if (en) begin
+      pc <= pc + 32'd1;
+    end
+  end
+
   always_comb begin
     if (reg_num_for_dbg < 6'd32) begin
-      reg_data_for_dbg = {27'd0, reg_num_for_dbg};
+      reg_data_for_dbg = {26'd0, reg_num_for_dbg};
     end else begin
       reg_data_for_dbg = 32'b0;
     end
   end
 
   assign uart_tx = 1'b0;
-  assign pc_for_dbg = 32'b0;
+  assign pc_for_dbg = pc;
 endmodule
 
 `default_nettype wire

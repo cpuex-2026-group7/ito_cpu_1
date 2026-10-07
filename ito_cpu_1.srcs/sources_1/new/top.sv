@@ -35,7 +35,7 @@ module top (
   clk_wiz_0 clk_gen (
     .clk_out1(clk_out1),
     .clk_out2(clk_out2),
-    .reset(CPU_RESETN),
+    .reset(1'b0),
     .locked(locked),
     .clk_in1(CLK100MHZ)
   );
@@ -69,7 +69,7 @@ module top (
   );
 
   logic cpu_en;
-  assign cpu_en = !locked && (step_button ? step_pulse : 1'b1);
+  assign cpu_en = locked && (step_button ? step_pulse : 1'b1);
 
   // CPU(未実装)
   logic [31:0] pc_for_dbg, reg_data_for_dbg;
@@ -107,9 +107,9 @@ module top (
   assign LED[15] = SW[15];
 
   // RGB LED表示
-  assign LED16_B = ~cpu_en;
+  assign LED16_B = 1'b0;
   assign LED16_G = cpu_en;
-  assign LED16_R = 1'b0;
+  assign LED16_R = ~cpu_en;
   assign LED17_B = 1'b0;
   assign LED17_G = 1'b0;
   assign LED17_R = 1'b0;
