@@ -1,0 +1,18 @@
+# ===== Vivado generated files =====
+*.cache/
+*.gen/
+*.hw/
+*.ip_user_files/
+*.runs/
+*.sim/
+.Xil/
+
+# logs / journals / misc
+*.jou
+*.log
+*.str
+*.backup.*
+vivado_pid*.zip
+*webtalk*
+
+# keep: *.xpr, *.srcs/, build.tcl, .gitignore
