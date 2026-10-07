@@ -5,6 +5,7 @@
 *.ip_user_files/
 *.runs/
 *.sim/
+*.srcs/
 .Xil/
 
 # logs / journals / misc
@@ -14,5 +15,9 @@
 *.backup.*
 vivado_pid*.zip
 *webtalk*
+
+# ip
+src/ip/*/*
+!src/ip/*/*.xci
 
 # keep: *.xpr, *.srcs/, build.tcl, .gitignore
