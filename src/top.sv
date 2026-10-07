@@ -71,17 +71,19 @@ module top (
   logic cpu_en;
   assign cpu_en = locked && (step_button ? step_pulse : 1'b1);
 
-  // CPU(未実装)
+  // CPU
   logic [31:0] pc_for_dbg, reg_data_for_dbg;
-  cpu u_cpu (
+  logic cpu_halted;
+  cpu_top u_cpu (
     .clk             (clk_out1),
     .rst             (rst),
     .en              (cpu_en),
     .uart_rx         (UART_TXD_IN),
     .uart_tx         (UART_RXD_OUT),
-    .pc_for_dbg      (pc_for_dbg),
-    .reg_num_for_dbg (switch[5:0]),
-    .reg_data_for_dbg(reg_data_for_dbg)
+    .pc_for_dbg      (pc_for_dbg),        // for debug
+    .reg_num_for_dbg (switch[5:0]),       // for debug
+    .reg_data_for_dbg(reg_data_for_dbg),  // for debug
+    .cpu_halted      (cpu_halted)         // for debug
   );
 
   // 7セグ表示
@@ -107,9 +109,9 @@ module top (
   assign LED[15] = SW[15];
 
   // RGB LED表示
-  assign LED16_B = 1'b0;
-  assign LED16_G = cpu_en;
-  assign LED16_R = ~cpu_en;
+  assign LED16_B = ~cpu_en;
+  assign LED16_G = cpu_en && ~cpu_halted;
+  assign LED16_R = cpu_halted;
   assign LED17_B = 1'b0;
   assign LED17_G = 1'b0;
   assign LED17_R = 1'b0;
