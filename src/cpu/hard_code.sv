@@ -4,11 +4,13 @@
 module hard_code
   import types::*;
 (
-  input wire word_t idx,
+  input wire addr_t addr,
   input wire word_t data
 );
 
-  assign data = idx > 32'd63 ? 32'd0 : idx;
+  logic [31:0] idx;
+  assign idx  = extended_imm & 32'h0000003F;  // 0~63
+  assign data = idx;
 
 endmodule
 
