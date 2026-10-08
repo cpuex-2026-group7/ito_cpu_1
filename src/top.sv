@@ -81,7 +81,7 @@ module top (
     .uart_rx     (UART_TXD_IN),
     .uart_tx     (UART_RXD_OUT),
     .pc_dbg      (pc_dbg),        // for debug
-    .reg_dbg     (switch[6:0]),   // for debug
+    .reg_dbg     (switch[5:0]),   // for debug
     .reg_dbg_data(reg_dbg_data),  // for debug
     .cpu_halted  (cpu_halted)     // for debug
   );

@@ -7,12 +7,12 @@ module reg_file
   import isa::*;
 (
   input wire logic clk,
-  input wire reg_addr_t rd,
-  input wire reg_addr_t rs1,
-  input wire reg_addr_t rs2,
+  input wire rf_idx_t rd,
+  input wire rf_idx_t rs1,
+  input wire rf_idx_t rs2,
   input wire logic write_en,
   input wire word_t wdata,
-  input wire reg_addr_t r_dbg,
+  input wire rf_idx_t r_dbg,
   output word_t rdata1,
   output word_t rdata2,
   output word_t r_dbg_data
@@ -27,7 +27,7 @@ module reg_file
   end
 
   always_ff @(posedge clk) begin
-    if (write_en && (rd & 6'b011111)) begin
+    if (write_en && (rd[4:0] != 5'd0)) begin
       regs[rd] <= wdata;
     end
   end

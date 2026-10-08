@@ -11,7 +11,7 @@ module cpu_top
   input wire logic uart_rx,
   output logic uart_tx,
   output addr_t pc_dbg,
-  input reg_addr_t reg_dbg,
+  input rf_idx_t reg_dbg,
   output word_t reg_dbg_data,
   output logic cpu_halted
 );
@@ -55,9 +55,10 @@ module cpu_top
   );
 
   addr_t jumped_pc, jalr_pc;
-  assign jumped_pc = pc_plus_1 + extended_imm;
+  assign jumped_pc = pc + extended_imm;
   assign jalr_pc   = rdata1 + extended_imm;
 
+  word_t alu_result, fpu_result;
   alu u_alu (
     .src1  (rdata1),
     .src2  (ctrl.alu_src_is_imm ? extended_imm : rdata2),

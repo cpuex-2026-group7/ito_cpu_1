@@ -9,7 +9,7 @@ module hard_code
 );
 
   logic [31:0] idx;
-  assign idx  = extended_imm & 32'h0000003F;  // 0~63
+  assign idx  = addr & 32'h0000003F;  // 0~63
   assign data = idx;
 
 endmodule
