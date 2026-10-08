@@ -20,4 +20,7 @@ vivado_pid*.zip
 src/ip/*/*
 !src/ip/*/*.xci
 
+.vscode
+__pycache__/
+
 # keep: *.xpr, *.srcs/, build.tcl, .gitignore

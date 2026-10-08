@@ -24,6 +24,7 @@ module fpu_top
       FPU_CVT_W_S: result = 32'd8;
       FPU_EQ:      result = 32'd9;
       FPU_LT:      result = 32'd10;
+      default:     result = 32'd11;
     endcase
   end
 

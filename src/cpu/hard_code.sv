@@ -5,7 +5,7 @@ module hard_code
   import types::*;
 (
   input wire addr_t addr,
-  input wire word_t data
+  output word_t data
 );
 
   logic [31:0] idx;
