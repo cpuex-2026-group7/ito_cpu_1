@@ -1,68 +1,95 @@
 package isa;
   import types::*;
-  typedef logic [4:0] reg_addr_t;
 
-  typedef enum logic [6:0] {
-    OP_HALT     = 7'b0000000,
-    OP_ADD      = 7'b0011000,
-    OP_SUB      = 7'b0011001,
-    OP_JAL      = 7'b0101000,
-    OP_LW       = 7'b0110000,
-    OP_SW       = 7'b0110001,
-    OP_BEQ      = 7'b0110010,
-    OP_BNE      = 7'b0110011,
-    OP_BLT      = 7'b0110100,
-    OP_BGE      = 7'b0110101,
-    OP_ADDI     = 7'b0110110,
-    OP_JALR     = 7'b0110111,
-    OP_FCVT_S_W = 7'b1010000,
-    OP_FCVT_W_S = 7'b1010001,
-    OP_FSQRT    = 7'b1010010,
-    OP_FMV      = 7'b1010011,
-    OP_FNEG     = 7'b1010100,
-    OP_FABS     = 7'b1010101,
-    OP_FEQ      = 7'b1011000,
-    OP_FLT      = 7'b1011001,
-    OP_FADD     = 7'b1011010,
-    OP_FSUB     = 7'b1011011,
-    OP_FMUL     = 7'b1011100,
-    OP_FDIV     = 7'b1011101,
-    OP_FLI      = 7'b1101000,
-    OP_FLIM     = 7'b1101001,
-    OP_FLW      = 7'b1110000,
-    OP_FSW      = 7'b1110001
+  // どっちのユニットを使うか?
+  typedef enum logic {
+    UNIT_ALU = 1'b0,  // ALUを使う
+    UNIT_FPU = 1'b1   // FPUを使う
+  } unit_t;
+
+  // 作用
+  typedef enum logic [1:0] {
+    EFF_NONE = 2'b00,  // 書き込みなし
+    EFF_WI   = 2'b01,  // Iレジスタに書く
+    EFF_WF   = 2'b10,  // Fレジスタに書く
+    EFF_MEM  = 2'b11   // メモリに書く
+  } eff_t;
+
+  // 即値形式
+  typedef enum logic [1:0] {
+    IMM_A = 2'b00,  // 引数1(float拡張)
+    IMM_B = 2'b01,  // 引数1(imm20)
+    IMM_C = 2'b10,  // 引数2(imm15)
+    IMM_D = 2'b11   // 引数3(imm10)
+  } imm_t;
+
+  typedef struct packed {
+    unit_t      unit;  // [31:31]
+    eff_t       eff;   // [30:29]
+    imm_t       imm;   // [28:27]
+    logic [1:0] id;    // [26:25]
   } opcode_t;
 
   typedef struct packed {
-    opcode_t    op;     // [31:25]
-    reg_addr_t   area1;  // [24:20]
-    reg_addr_t   area2;  // [19:15]
-    reg_addr_t   area3;  // [14:10]
-    logic [9:0] area4;  // [9:0]
+    opcode_t    op;   // [31:25]
+    reg_addr_t  rd;   // [24:20]
+    reg_addr_t  rs1;  // [19:15]
+    reg_addr_t  rs2;  // [14:10]
+    logic [9:0] imm;  // [9:0]
   } instr_t;
 
+  typedef enum logic [1:0] {
+    PC_PLUS_ONE,  // pc+1
+    PC_BRANCH,    // pc+1+imm (条件付き)
+    PC_JAL,       // pc+1+imm
+    PC_JALR       // rs1+imm
+  } pc_src_t;
+
   typedef enum logic [2:0] {
-    ALU_ADD,
-    ALU_SUB,
-    ALU_EQ,
-    ALU_NE,
-    ALU_LT,
-    ALU_GE
+    RES_ALU,
+    RES_FPU,
+    RES_MEM,
+    RES_IMM,
+    RES_HARD_CODE,
+    RES_PC_PLUS_ONE
+  } result_src_t;
+
+  typedef enum logic [2:0] {
+    ALU_ADD = 3'b000,
+    ALU_SUB = 3'b001,
+    ALU_EQ  = 3'b100,
+    ALU_NE  = 3'b101,
+    ALU_LT  = 3'b110,
+    ALU_GE  = 3'b111
   } alu_op_t;
 
+  // {eff[0], imm[0], id}
   typedef enum logic [3:0] {
-    FPU_FCVT_S_W,
-    FPU_FCVT_W_S,
-    FPU_FSQRT,
-    FPU_FMV,
-    FPU_FNEG,
-    FPU_FABS,
-    FPU_FEQ,
-    FPU_FLT,
-    FPU_FADD,
-    FPU_FSUB,
-    FPU_FMUL,
-    FPU_FDIV
+    FPU_CVT_S_W = 4'b0000,
+    FPU_SQRT    = 4'b0001,
+    FPU_NEG     = 4'b0010,
+    FPU_ABS     = 4'b0011,
+    FPU_ADD     = 4'b0100,
+    FPU_SUB     = 4'b0101,
+    FPU_MUL     = 4'b0110,
+    FPU_DIV     = 4'b0111,
+    FPU_CVT_W_S = 4'b1000,
+    FPU_EQ      = 4'b1100,
+    FPU_LT      = 4'b1101
   } fpu_op_t;
+
+  typedef struct packed {
+    logic    rd_is_f;
+    logic    rs1_is_f;
+    logic    rs2_is_f;
+    alu_op_t alu_op;
+    fpu_op_t fpu_op;
+    logic    alu_src_is_imm;
+    logic    reg_we;
+    logic    mem_we;
+    pc_src_t pc_src;
+    result_src_t result_src;
+    logic    halt;
+  } ctrl_t;
 
 endpackage
