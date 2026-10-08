@@ -110,7 +110,7 @@ module top (
   assign LED[15] = SW[15];
 
   // RGB LED表示
-  assign LED16_B = ~cpu_en;
+  assign LED16_B = ~cpu_en && ~cpu_halted;
   assign LED16_G = cpu_en && ~cpu_halted;
   assign LED16_R = cpu_halted;
   assign LED17_B = 1'b0;

@@ -11,7 +11,7 @@ module cpu_top
   input wire logic uart_rx,
   output logic uart_tx,
   output addr_t pc_dbg,
-  input rf_idx_t reg_dbg,
+  input wire rf_idx_t reg_dbg,
   output word_t reg_dbg_data,
   output logic cpu_halted
 );
@@ -46,7 +46,7 @@ module cpu_top
     .rd({ctrl.rd_is_f, instr[24:20]}),
     .rs1({ctrl.rs1_is_f, instr[19:15]}),
     .rs2({ctrl.rs2_is_f, instr[14:10]}),
-    .write_en(en & ctrl.reg_we),
+    .write_en(!rst & en & ctrl.reg_we),
     .wdata(write_back_data),
     .r_dbg(reg_dbg),
     .rdata1(rdata1),
@@ -82,7 +82,7 @@ module cpu_top
   d_mem u_d_mem (
     .clk(clk),
     .rst(rst),
-    .write_en(en & ctrl.mem_we),
+    .write_en(!rst & en & ctrl.mem_we),
     .addr(alu_result),
     .wdata(rdata2),
     .rdata(mem_rdata)

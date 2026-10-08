@@ -4,7 +4,7 @@
 // 押されたら1クロックだけ1のパルス出すボタン
 
 module pulse_button #(
-  parameter int STABLE_BITS = 10
+  parameter int STABLE_BITS = 16
 ) (
   input wire logic clk,
   input wire logic btn_in,

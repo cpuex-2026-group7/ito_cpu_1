@@ -78,10 +78,11 @@ proc show_timing {} {
         puts "Timing: no data (implementation not finished)"
         return
     }
-    set whs [get_property STATS.WHS $impl]
-    puts "Timing: WNS = $wns ns, WHS = $whs ns"
-    if {[catch {expr {$wns < 0 || $whs < 0}} bad] == 0 && $bad} {
-        puts "  !!! TIMING VIOLATED - design may misbehave on the board"
+    set whs  [get_property STATS.WHS  $impl]
+    set tpws [get_property STATS.TPWS $impl]
+    puts "Timing: WNS = $wns ns (setup), WHS = $whs ns (hold), TPWS = $tpws ns (pulse width)"
+    if {$wns < 0 || $whs < 0 || $tpws < 0} {
+        puts "  !!! TIMING VIOLATED - see [get_property DIRECTORY $impl]/[get_property top [current_fileset]]_timing_summary_routed.rpt"
     }
 }
 

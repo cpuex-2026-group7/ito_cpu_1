@@ -1,18 +1,20 @@
 `timescale 1ns / 1ps
 `default_nettype none
 
-module seven_seg (
+module seven_seg #(
+  parameter int SCAN_BITS = 17
+) (
   input  wire logic        clk,
   input  wire logic [31:0] value,
   output logic      [ 7:0] anode,         // どの桁をつけるか? (active low)
   output logic      [ 6:0] seg,           // 7segのパターン (active low)
   output logic             decimal_point  // 小数点 (active low)
 );
-  logic [19:0] cnt = '0;
+  logic [SCAN_BITS-1:0] cnt = '0;
   always_ff @(posedge clk) cnt <= cnt + 1;
 
   logic [2:0] digit;
-  assign digit = cnt[19:17];
+  assign digit = cnt[SCAN_BITS-1-:3];
 
   logic [3:0] num;
   logic [6:0] pattern;

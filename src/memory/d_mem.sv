@@ -12,7 +12,12 @@ module d_mem
   output word_t rdata
 );
 
-  assign rdata = 32'b0;
+  (* ram_style = "block" *) word_t mem[1024];
+
+  always_ff @(negedge clk) begin
+    if (write_en) mem[addr[9:0]] <= wdata;
+    rdata <= mem[addr[9:0]];
+  end
 
 endmodule
 

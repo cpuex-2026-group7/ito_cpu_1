@@ -9,7 +9,9 @@ module i_mem
   output instr_t instr
 );
 
-  assign instr = 32'b0;
+  word_t mem[1024];
+  initial $readmemh("fib.mem", mem);
+  assign instr = mem[addr[9:0]];
 
 endmodule
 
