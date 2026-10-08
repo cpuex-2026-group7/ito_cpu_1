@@ -29,7 +29,7 @@ module decoder
         unique case (op.eff)
           EFF_NONE: begin
             unique case (op.imm)
-              IMM_A: begin  // beq,bne,blt,bge
+              IMM_D: begin  // beq,bne,blt,bge
                 ctrl.alu_op         = alu_op_t'({1'b1, op.id});  // idをそのまま入れられる
                 ctrl.alu_src_is_imm = 1'b0;
                 ctrl.pc_src         = PC_BRANCH;

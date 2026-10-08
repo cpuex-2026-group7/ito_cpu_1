@@ -26,10 +26,9 @@ module cpu_top
     .instr(instr)
   );
 
-  wire opcode_t op;
-  ctrl_t        ctrl;
+  ctrl_t ctrl;
   decoder u_decoder (
-    .op  (op),
+    .op  (instr.op),
     .ctrl(ctrl)
   );
   assign cpu_halted = ctrl.halt;
@@ -37,17 +36,17 @@ module cpu_top
   word_t extended_imm;
   imm_extend u_imm_extend (
     .instr(instr),
-    .imm_type(ctrl.op.imm),
+    .imm_type(instr.op.imm),
     .extended_imm(extended_imm)
   );
 
   word_t rdata1, rdata2, write_back_data;
   reg_file u_reg_file (
     .clk(clk),
-    .rd(instr[24:20]),
-    .rs1(instr[19:15]),
-    .rs2(instr[14:10]),
-    .write_en(ctrl.write_en),
+    .rd({ctrl.rd_is_f, instr[24:20]}),
+    .rs1({ctrl.rs1_is_f, instr[19:15]}),
+    .rs2({ctrl.rs2_is_f, instr[14:10]}),
+    .write_en(en & ctrl.reg_we),
     .wdata(write_back_data),
     .r_dbg(reg_dbg),
     .rdata1(rdata1),
@@ -62,19 +61,19 @@ module cpu_top
   alu u_alu (
     .src1  (rdata1),
     .src2  (ctrl.alu_src_is_imm ? extended_imm : rdata2),
-    .alu_op(alu_op),
+    .alu_op(ctrl.alu_op),
     .result(alu_result)
   );
   fpu_top u_fpu (
     .src1  (rdata1),
     .src2  (rdata2),
-    .fpu_op(fpu_op),
+    .fpu_op(ctrl.fpu_op),
     .result(fpu_result)
   );
 
   word_t hard_coded_data;
   hard_code u_hard_code (
-    .addr(imm_extend),
+    .addr(extended_imm),
     .data(hard_coded_data)
   );
 
@@ -82,7 +81,7 @@ module cpu_top
   d_mem u_d_mem (
     .clk(clk),
     .rst(rst),
-    .write_en(ctrl.mem_write_en),
+    .write_en(en & ctrl.mem_we),
     .addr(alu_result),
     .wdata(rdata2),
     .rdata(mem_rdata)
@@ -106,7 +105,7 @@ module cpu_top
     end else if (en && !ctrl.halt) begin
       unique case (ctrl.pc_src)
         PC_PLUS_ONE: pc <= pc_plus_1;
-        PC_BRANCH:   pc <= jumped_pc;
+        PC_BRANCH:   pc <= alu_result[0] ? jumped_pc : pc_plus_1;
         PC_JAL:      pc <= jumped_pc;
         PC_JALR:     pc <= jalr_pc;
         default:     pc <= 32'b0;

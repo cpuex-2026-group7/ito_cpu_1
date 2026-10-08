@@ -33,7 +33,7 @@ module reg_file
   end
 
   assign rdata1 = regs[rs1];
-  assign rdata1 = regs[rs2];
+  assign rdata2 = regs[rs2];
   assign r_dbg_data = regs[r_dbg];
 
 endmodule

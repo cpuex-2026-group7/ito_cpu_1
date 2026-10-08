@@ -72,26 +72,27 @@ module top (
   assign cpu_en = locked && (step_button ? step_pulse : 1'b1);
 
   // CPU
-  logic [31:0] pc_for_dbg, reg_data_for_dbg;
+  logic [31:0] pc_dbg, reg_dbg_data;
   logic cpu_halted;
   cpu_top u_cpu (
-    .clk             (clk_out1),
-    .rst             (rst),
-    .en              (cpu_en),
-    .uart_rx         (UART_TXD_IN),
-    .uart_tx         (UART_RXD_OUT),
-    .pc_for_dbg      (pc_for_dbg),        // for debug
-    .reg_num_for_dbg (switch[6:0]),       // for debug
-    .reg_data_for_dbg(reg_data_for_dbg),  // for debug
-    .cpu_halted      (cpu_halted)         // for debug
+    .clk         (clk_out1),
+    .rst         (rst),
+    .en          (cpu_en),
+    .uart_rx     (UART_TXD_IN),
+    .uart_tx     (UART_RXD_OUT),
+    .pc_dbg      (pc_dbg),        // for debug
+    .reg_dbg     (switch[6:0]),   // for debug
+    .reg_dbg_data(reg_dbg_data),  // for debug
+    .cpu_halted  (cpu_halted)     // for debug
   );
+
 
   // 7セグ表示
   logic [31:0] seg7_val;
   always_comb begin
-    if (switch < 7'd64) seg7_val = reg_data_for_dbg;  // 0-31はレジスタ
-    else if (switch == 7'd64) seg7_val = pc_for_dbg;  // 32はPC
-    else seg7_val = 32'h0;  // 33-63は予約
+    if (switch < 7'd64) seg7_val = reg_dbg_data;  // 0-63はレジスタ
+    else if (switch == 7'd64) seg7_val = pc_dbg;  // 64はPC
+    else seg7_val = 32'h0;  // 65-127は予約
   end
 
   logic [6:0] seg;

@@ -1,5 +1,7 @@
 package isa;
   import types::*;
+  // ちなみにx0=0, f0=0の規約。
+  // ワードアドレッシング
 
   // どっちのユニットを使うか?
   typedef enum logic {
