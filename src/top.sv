@@ -42,7 +42,7 @@ module top (
 
   // 入力を同期にする
   logic reset_button, step_button;
-  logic [5:0] switch;
+  logic [6:0] switch;
   async_to_sync #(1) sync1 (
     .clk  (clk_out1),
     .async(CPU_RESETN),
@@ -53,9 +53,9 @@ module top (
     .async(SW[15]),
     .sync (step_button)
   );
-  async_to_sync #(6) sync3 (
+  async_to_sync #(7) sync3 (
     .clk  (clk_out1),
-    .async(SW[5:0]),
+    .async(SW[6:0]),
     .sync (switch)
   );
   logic rst;
@@ -81,7 +81,7 @@ module top (
     .uart_rx         (UART_TXD_IN),
     .uart_tx         (UART_RXD_OUT),
     .pc_for_dbg      (pc_for_dbg),        // for debug
-    .reg_num_for_dbg (switch[5:0]),       // for debug
+    .reg_num_for_dbg (switch[6:0]),       // for debug
     .reg_data_for_dbg(reg_data_for_dbg),  // for debug
     .cpu_halted      (cpu_halted)         // for debug
   );
@@ -89,8 +89,8 @@ module top (
   // 7セグ表示
   logic [31:0] seg7_val;
   always_comb begin
-    if (switch < 6'd32) seg7_val = reg_data_for_dbg;  // 0-31はレジスタ
-    else if (switch == 6'd32) seg7_val = pc_for_dbg;  // 32はPC
+    if (switch < 7'd64) seg7_val = reg_data_for_dbg;  // 0-31はレジスタ
+    else if (switch == 7'd64) seg7_val = pc_for_dbg;  // 32はPC
     else seg7_val = 32'h0;  // 33-63は予約
   end
 

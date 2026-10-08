@@ -70,7 +70,7 @@ module decoder
         ctrl.rs2_is_f = 1'b1;
         unique case (op.imm)
           IMM_A:   ctrl.result_src = RES_IMM;  // fli.s
-          IMM_B:   ctrl.result_src = RES_HARD_CODE;  // flim.s
+          IMM_B:   ctrl.result_src = RES_HARD_CODE;  // flim.s 即値はsignedとして拡張
           default: ctrl.result_src = RES_FPU;
         endcase
       end

@@ -8,22 +8,24 @@ module alu
   input wire word_t src1,
   input wire word_t src2,
   input wire alu_op_t alu_op,
-  output word_t result,
-  output logic true_flag
+  output word_t result
 );
+
+  word_t add, sub;
+  logic eq, lt, cmp_true;
+  assign add = src1 + src2;
+  assign sub = src1 - src2;
+  assign eq = (src1 == src2);
+  assign lt = ($signed(src1) < $signed(src2));
+  assign cmp_true = (alu_op[1] ? lt : eq) ^ alu_op[0];
 
   always_comb begin
     unique case (alu_op)
-      ALU_ADD: result = src1 + src2;
-      ALU_SUB: result = src1 - src2;
-      ALU_EQ:  result = src1 == src2;
-      ALU_NE:  result = src1 != src2;
-      ALU_LT:  result = src1 < src2;
-      ALU_GE:  result = src1 >= src2;
+      ALU_ADD: result = add;
+      ALU_SUB: result = sub;
+      default: result = {31'b0, cmp_true};
     endcase
   end
-
-  assign true_flag = (result == 1'b1);
 
 endmodule
 

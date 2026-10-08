@@ -20,7 +20,7 @@ package isa;
     IMM_A = 2'b00,  // 引数1(float拡張)
     IMM_B = 2'b01,  // 引数1(imm20)
     IMM_C = 2'b10,  // 引数2(imm15)
-    IMM_D = 2'b11   // 引数3(imm10)
+    IMM_D = 2'b11   // 引数3(imm5+10)
   } imm_t;
 
   typedef struct packed {
@@ -35,7 +35,7 @@ package isa;
     reg_addr_t  rd;   // [24:20]
     reg_addr_t  rs1;  // [19:15]
     reg_addr_t  rs2;  // [14:10]
-    logic [9:0] imm;  // [9:0]
+    logic [9:0] rest;  // [9:0]
   } instr_t;
 
   typedef enum logic [1:0] {
