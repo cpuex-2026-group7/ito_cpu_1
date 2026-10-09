@@ -116,6 +116,14 @@ module cpu_top
 
   assign uart_tx = 1'b0;
   assign pc_dbg  = pc;
+
+`ifdef VERILATOR
+  always_ff @(posedge clk) begin
+    if (!rst && !halted)
+      dbg_dpi::dpi_commit(pc, instr, ctrl.reg_we, ctrl.rd_is_f, 32'(ctrl.rd), wb_data, ctrl.mem_we, 32'(alu_result),
+                          ctrl.mem_data);
+  end
+`endif
 endmodule
 
 `default_nettype wire
