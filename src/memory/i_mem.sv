@@ -10,7 +10,15 @@ module i_mem
 );
 
   word_t mem[1024];
+`ifdef VERILATOR
+  initial begin
+    string path;
+    if (!$value$plusargs("imem=%s", path)) path = "fib.mem";
+    $readmemh(path, mem);
+  end
+`else
   initial $readmemh("fib.mem", mem);
+`endif
   assign instr = mem[addr[9:0]];
 
 endmodule

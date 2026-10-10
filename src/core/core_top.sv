@@ -118,10 +118,21 @@ module cpu_top
   assign pc_dbg  = pc;
 
 `ifdef VERILATOR
+  import "DPI-C" function void dpi_commit(
+    input int pc,
+    input int instr,
+    input bit reg_we,
+    input bit rd_is_f,
+    input int rd,
+    input int wdata,
+    input bit mem_we,
+    input int mem_addr,
+    input int mem_wdata
+  );
+
   always_ff @(posedge clk) begin
-    if (!rst && !halted)
-      dbg_dpi::dpi_commit(pc, instr, ctrl.reg_we, ctrl.rd_is_f, 32'(ctrl.rd), wb_data, ctrl.mem_we, 32'(alu_result),
-                          ctrl.mem_data);
+    if (!rst && en && !ctrl.halt)
+      dpi_commit(pc, instr, ctrl.reg_we, ctrl.rd_is_f, 32'(instr.rd), write_back_data, ctrl.mem_we, alu_result, rdata2);
   end
 `endif
 endmodule

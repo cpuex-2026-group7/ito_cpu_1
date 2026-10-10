@@ -23,4 +23,9 @@ src/ip/*/*
 .vscode
 __pycache__/
 
+sim/sim_repository/
+sim/obj_dir/
+*.trace
+*.fst
+
 # keep: *.xpr, *.srcs/, build.tcl, .gitignore

@@ -36,11 +36,6 @@ module reg_file
   assign rdata2 = regs[rs2];
   assign r_dbg_data = regs[r_dbg];
 
-`ifdef VERILATOR
-  final for (int i = 0; i < 32; i++) dbg_dpi::dpi_dump_reg(IS_I, i, regs[i]);
-  final for (int i = 32; i < 64; i++) dbg_dpi::dpi_dump_reg(IS_F, i, regs[i]);
-`endif
-
 endmodule
 
 `default_nettype wire
