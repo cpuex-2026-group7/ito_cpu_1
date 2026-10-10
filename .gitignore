@@ -28,4 +28,6 @@ sim/obj_dir/
 *.trace
 *.fst
 
+timing/
+
 # keep: *.xpr, *.srcs/, build.tcl, .gitignore

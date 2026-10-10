@@ -1,17 +1,20 @@
-# build.tcl - Vivado batch helper (no GUI)
+# _build.tcl - Vivado を GUI なしで動かすスクリプト
 #
-# Put this file next to the .xpr and run in that directory:
-#   vivado -mode batch -nojournal -notrace -source build.tcl -tclargs [mode] [clean]
+# .xpr と同じフォルダに置き、そのフォルダで実行する（普通は build.bat から呼ぶ）:
+#   vivado -mode batch -nojournal -notrace -source _build.tcl -tclargs [モード] [clean]
 #
-# mode:
-#   all      (default) build bitstream if needed, then program the board
-#   build    build bitstream only
-#   program  program the board with the existing bitstream
-#   errors   show ERROR / CRITICAL WARNING of the last run (no build)
-#   status   show run status and timing summary
-# clean      force re-run of synthesis + implementation
+# モード:
+#   all      （既定）必要ならビットストリームを作り、ボードに書き込む
+#   build    ビットストリームを作るだけ
+#   program  今あるビットストリームをボードに書き込むだけ
+#   errors   前回の実行の ERROR と CRITICAL WARNING を表示（ビルドはしない）
+#   status   各ランの状態とタイミングの概要を表示
+#   timing   前回の結果からクリティカルパスを分析して表示（ビルドはしない）
+#            配置配線が終わっていればその結果、無ければ合成の結果を使う
+#            timing 20 のように数を付けるとワースト 20 本（既定 10 本）
+# clean      合成と配置配線を強制的にやり直す
 #
-# Exit code: 0 = success, 1 = failure (usable from shell scripts)
+# 終了コード: 0 = 成功、1 = 失敗（シェルスクリプトから判定に使える）
 
 set script_dir [file dirname [file normalize [info script]]]
 
@@ -35,11 +38,11 @@ proc cpu_count {} {
 }
 
 # ---------------------------------------------------------------
-# messages / reports
+# メッセージ・レポート
 # ---------------------------------------------------------------
 
-# Print ERROR and CRITICAL WARNING lines from every run's log.
-# Returns the number of errors.
+# 全ランのログから ERROR と CRITICAL WARNING の行を表示する。
+# 戻り値は ERROR の数
 proc show_run_messages {} {
     set n_err 0
     set n_crit 0
@@ -105,7 +108,141 @@ proc bitfile_path {} {
 }
 
 # ---------------------------------------------------------------
-# build
+# クリティカルパスの分析（timing モード）
+# ---------------------------------------------------------------
+proc fmt_ns {v} {
+    if {$v eq ""} { return "    inf" }
+    return [format "%7.3f" $v]
+}
+
+# セルが属する階層を返す。例: u_cpu/u_alu/res_i_3 なら u_cpu/u_alu
+proc cell_parent {name} {
+    set i [string last "/" $name]
+    if {$i < 0} { return "(top)" }
+    return [string range $name 0 [expr {$i - 1}]]
+}
+
+# タイミングパス上のセルを始点から終点の順に返す（連続する同じセルは 1 つにまとめる）
+proc path_cells {path} {
+    set cells {}
+    set last ""
+    foreach pin [get_pins -quiet -of_objects $path] {
+        set c [get_cells -quiet -of_objects $pin]
+        if {$c eq "" || $c eq $last} { continue }
+        lappend cells $c
+        set last $c
+    }
+    return $cells
+}
+
+# 連続するセルを階層ごとにまとめる。戻り値は 階層 と 種類ごとの個数 の組のリスト
+proc path_by_module {cells} {
+    set groups {}
+    set cur ""
+    set types [dict create]
+    foreach c $cells {
+        set h [cell_parent [get_property NAME $c]]
+        if {$h ne $cur && $cur ne ""} {
+            lappend groups [list $cur $types]
+            set types [dict create]
+        }
+        set cur $h
+        dict incr types [get_property REF_NAME $c]
+    }
+    if {$cur ne ""} { lappend groups [list $cur $types] }
+    return $groups
+}
+
+proc show_critical_paths {n} {
+    set synth [get_runs synth_1]
+    set impl  [get_runs impl_1]
+    if {[get_property PROGRESS $impl] eq "100%" && ![run_failed $impl]} {
+        open_run impl_1
+        set stage "after place & route (impl_1)"
+    } elseif {[get_property PROGRESS $synth] eq "100%" && ![run_failed $synth]} {
+        open_run synth_1
+        set stage "after synthesis (synth_1) - net delays are ESTIMATES"
+    } else {
+        die "no finished synthesis/implementation. run 'build' first"
+    }
+
+    # Vivado の詳しいレポートは timing/ に保存する
+    set dir [file join $::script_dir timing]
+    file mkdir $dir
+    report_timing_summary -max_paths $n -file [file join $dir summary.rpt]
+    report_timing -delay_type max -max_paths $n -nworst 1 -sort_by slack -input_pins \
+        -file [file join $dir paths.rpt]
+
+    section "Timing ($stage)"
+
+    # クロックごとに 周期、ワーストスラック、見積もりの最大周波数 を表示
+    puts [format "  %-24s %9s %9s %10s" "clock" "period" "WNS" "Fmax(est)"]
+    foreach clk [get_clocks] {
+        set period [get_property PERIOD $clk]
+        set p [get_timing_paths -quiet -delay_type max -max_paths 1 -group $clk]
+        if {$p eq "" || [get_property SLACK $p] eq ""} {
+            puts [format "  %-24s %7.3f ns %9s %10s" $clk $period "-" "-"]
+            continue
+        }
+        set wns [get_property SLACK $p]
+        set fmax [expr {1000.0 / ($period - $wns)}]
+        puts [format "  %-24s %7.3f ns %s ns %6.1f MHz" $clk $period [fmt_ns $wns] $fmax]
+    }
+
+    # 違反しているパスを全部取ってきて TNS（負のスラックの合計）を計算する
+    set fail [get_timing_paths -quiet -delay_type max -max_paths 100000 -nworst 1 -slack_lesser_than 0]
+    set tns 0.0
+    foreach p $fail { set tns [expr {$tns + [get_property SLACK $p]}] }
+    set hold [get_timing_paths -quiet -delay_type min -max_paths 1]
+    set whs [expr {$hold eq "" ? "" : [get_property SLACK $hold]}]
+    puts [format "  setup: TNS = %.3f ns, failing endpoints = %d" $tns [llength $fail]]
+    puts "  hold : WHS = [fmt_ns $whs] ns"
+
+    # ワースト n 本を 1 本ずつ表示し、通ったモジュールを数えておく
+    set paths [get_timing_paths -delay_type max -max_paths $n -nworst 1 -sort_by slack]
+    set hits [dict create]
+    set i 0
+    foreach p $paths {
+        incr i
+        set slack [get_property SLACK $p]
+        set dp    [get_property DATAPATH_DELAY $p]
+        set ld    [get_property DATAPATH_LOGIC_DELAY $p]
+        set nd    [get_property DATAPATH_NET_DELAY $p]
+        set mark  [expr {$slack ne "" && $slack < 0 ? "  <<< VIOLATED" : ""}]
+
+        section "#$i  slack [fmt_ns $slack] ns$mark"
+        puts [format "  requirement %s ns   data path %s ns = logic %s (%2.0f%%) + route %s (%2.0f%%)" \
+                  [fmt_ns [get_property REQUIREMENT $p]] [fmt_ns $dp] \
+                  [fmt_ns $ld] [expr {$dp > 0 ? 100.0 * $ld / $dp : 0}] \
+                  [fmt_ns $nd] [expr {$dp > 0 ? 100.0 * $nd / $dp : 0}]]
+        puts "  logic levels [get_property LOGIC_LEVELS $p], skew [fmt_ns [get_property SKEW $p]] ns,\
+              clock [get_property STARTPOINT_CLOCK $p] -> [get_property ENDPOINT_CLOCK $p]"
+        puts "  from: [get_property STARTPOINT_PIN $p]"
+        puts "  to  : [get_property ENDPOINT_PIN $p]"
+        puts "  through:"
+        set seen [dict create]
+        foreach g [path_by_module [path_cells $p]] {
+            lassign $g hier types
+            set ts {}
+            dict for {t k} $types { lappend ts [expr {$k > 1 ? "$t x$k" : $t}] }
+            puts [format "    %-40s %s" $hier [join $ts ", "]]
+            # 同じパスで同じモジュールを 2 回通っても 1 回と数える
+            if {![dict exists $seen $hier]} { dict set seen $hier 1; dict incr hits $hier }
+        }
+    }
+
+    # 通った本数の多いモジュール順に並べる
+    section "Modules on the worst $i path(s)"
+    set rows {}
+    dict for {h k} $hits { lappend rows [list $h $k] }
+    foreach r [lsort -integer -decreasing -index 1 $rows] {
+        puts [format "  %3d / %d  %s" [lindex $r 1] $i [lindex $r 0]]
+    }
+    puts "\nfull reports: timing/summary.rpt, timing/paths.rpt"
+}
+
+# ---------------------------------------------------------------
+# ビルド
 # ---------------------------------------------------------------
 proc build_bitstream {force} {
     section "Build"
@@ -121,6 +258,7 @@ proc build_bitstream {force} {
     set impl  [get_runs impl_1]
     set bit   [bitfile_path]
 
+    # 前回の結果が古いとき（ソースが変わった、未完了、clean 指定）だけやり直す
     set need_synth [expr {$force ||
                           [get_property NEEDS_REFRESH $synth] ||
                           [get_property PROGRESS $synth] ne "100%"}]
@@ -159,7 +297,7 @@ proc build_bitstream {force} {
 }
 
 # ---------------------------------------------------------------
-# program
+# ボードへの書き込み
 # ---------------------------------------------------------------
 proc program_device {bit} {
     section "Program"
@@ -182,6 +320,7 @@ proc program_device {bit} {
     current_hw_device $dev
     refresh_hw_device -update_hw_probes false $dev
 
+    # ILA などのデバッグコア用のプローブファイルがあれば一緒に設定する
     set ltx "[file rootname $bit].ltx"
     if {[file exists $ltx]} {
         set_property PROBES.FILE      $ltx $dev
@@ -204,18 +343,26 @@ proc program_device {bit} {
 }
 
 # ---------------------------------------------------------------
-# main
+# メイン
 # ---------------------------------------------------------------
 set mode  "all"
 set force 0
+set npaths 10
 foreach a $argv {
     switch -- $a {
-        all - build - program - errors - status { set mode $a }
+        all - build - program - errors - status - timing { set mode $a }
         clean   { set force 1 }
-        default { die "unknown argument: $a  (all|build|program|errors|status [clean])" }
+        default {
+            if {[string is integer -strict $a] && $a > 0} {
+                set npaths $a
+            } else {
+                die "unknown argument: $a  (all|build|program|errors|status|timing [N] [clean])"
+            }
+        }
     }
 }
 
+# このスクリプトと同じフォルダにある .xpr を開く
 set xprs [glob -nocomplain -directory $script_dir *.xpr]
 if {[llength $xprs] != 1} {
     die "expected exactly one .xpr in $script_dir (found [llength $xprs])"
@@ -229,6 +376,7 @@ switch -- $mode {
     program { program_device [bitfile_path] }
     errors  { set rc [expr {[show_run_messages] > 0}]; show_timing }
     status  { show_status; show_timing }
+    timing  { show_critical_paths $npaths }
 }
 
 close_project

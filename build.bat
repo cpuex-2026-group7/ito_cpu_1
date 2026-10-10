@@ -1,6 +1,6 @@
 @echo off
 rem build.bat - wrapper for _build.tcl (Windows cmd / PowerShell)
-rem usage: build.bat [all^|build^|program^|errors^|status] [clean]
+  rem usage: build.bat [all^|build^|program^|errors^|status^|timing [N]] [clean]
 rem To use a specific Vivado:  set VIVADO=C:\Xilinx\Vivado\2024.2\bin\vivado.bat
 setlocal
 cd /d "%~dp0"

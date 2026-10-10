@@ -1,7 +1,7 @@
 `timescale 1ns / 1ps
 `default_nettype none
 
-module cpu_top
+module core_top
   import types::*;
   import isa::*;
 (

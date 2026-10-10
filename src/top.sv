@@ -74,7 +74,7 @@ module top (
   // CPU
   logic [31:0] pc_dbg, reg_dbg_data;
   logic cpu_halted;
-  cpu_top u_cpu (
+  core_top u_core (
     .clk         (clk_out1),
     .rst         (rst),
     .en          (cpu_en),

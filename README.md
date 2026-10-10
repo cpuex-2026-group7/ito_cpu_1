@@ -26,3 +26,7 @@ make ARGS="+wave_from=60 +wave_len=40"   # 区間の波形を出力する。gtkw
 # CPU説明
 
 シングルサイクル
+
+# その他
+
+verilatorやtclファイルなどはClaude製
