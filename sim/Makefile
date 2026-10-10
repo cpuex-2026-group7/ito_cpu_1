@@ -26,8 +26,8 @@ endif
 # package は使う側より先に読む必要がある
 PKGS := $(RTL_DIR)/defs/types.sv $(RTL_DIR)/defs/isa.sv
 RTL  := $(filter-out $(PKGS),$(shell find $(RTL_DIR) -name '*.sv' -not -path '*/ip/*' -not -name top.sv | sort))
-ifeq ($(shell grep -lE '^\s*module\s+cpu_top\b' $(RTL) /dev/null),)
-  $(error $(RTL_DIR) 以下に module cpu_top が見つからない（見つかった .sv: $(notdir $(RTL))）)
+ifeq ($(shell grep -lE '^\s*module\s+core_top\b' $(RTL) /dev/null),)
+  $(error $(RTL_DIR) 以下に module core_top が見つからない（見つかった .sv: $(notdir $(RTL))）)
 endif
 
 TB_SRCS := $(wildcard *.cpp)
@@ -36,14 +36,14 @@ TB_HDRS := $(wildcard *.h)
 SIM_SRCS = $(filter-out %/main.cpp,$(wildcard $(SIM_REPO)/src/*.cpp))
 SIM_HDRS = $(wildcard $(SIM_REPO)/src/*.h)
 
-EXE     := obj_dir/Vcpu_top
+EXE     := obj_dir/Vcore_top
 VL_ROOT := $(shell verilator --getenv VERILATOR_ROOT 2>/dev/null)
 
 # sim のヘッダには <cstdint> などの include 漏れがあるので、全ファイルの先頭で読ませておく
 CXXFLAGS_TB := -std=c++23 -O2 -I$(CURDIR) -I$(CURDIR)/$(SIM_REPO)/src \
                -include cstdint -include cstdio -include cstdlib -Wno-unused-result
 
-VFLAGS := --cc --exe --build -j 0 --top-module cpu_top --trace-fst \
+VFLAGS := --cc --exe --build -j 0 --top-module core_top --trace-fst \
           -O3 --x-assign fast --x-initial fast -Wno-fatal -Wno-TIMESCALEMOD \
           -CFLAGS "$(CXXFLAGS_TB)"
 
@@ -73,7 +73,7 @@ fetch:
 
 $(EXE): | check-deps
 $(EXE): $(PKGS) $(RTL) $(TB_SRCS) $(TB_HDRS) $(SIM_SRCS) $(SIM_HDRS)
-	verilator $(VFLAGS) $(PKGS) $(RTL) $(TB_SRCS) $(SIM_SRCS) -o Vcpu_top
+	verilator $(VFLAGS) $(PKGS) $(RTL) $(TB_SRCS) $(SIM_SRCS) -o Vcore_top
 
 # Windows の VS Code からは WSL の /usr/share/verilator が見えにくいので、リポジトリ内にコピーしておく
 ide:
