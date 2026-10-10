@@ -54,7 +54,6 @@ VFLAGS := --cc --exe --build -j 0 --top-module core_top --trace-fst \
 
 check-deps:
 	@command -v verilator >/dev/null || { echo "verilator が無い。WSL で sudo apt install verilator を実行して"; exit 1; }
-	@command -v $(CXX) >/dev/null || { echo "$(CXX) が無い（sim は clang++ 前提）。WSL で sudo apt install clang を実行して"; exit 1; }
 	@echo '#include <cstdio>' | $(CXX) -x c++ -std=c++23 -fsyntax-only - 2>/dev/null || { \
 	  echo "$(CXX) が C++ の標準ヘッダ（<cstdio> など）を見つけられない。$(CXX) が使っている GCC の版:"; \
 	  $(CXX) -v -x c++ -fsyntax-only /dev/null 2>&1 | grep "Selected GCC" ; \
@@ -94,7 +93,7 @@ compare: build
 	python3 mem2bin.py $(PROG) obj_dir/prog.bin
 	./$(SIM_EXE) obj_dir/prog.bin --trace sim.trace > sim.dump
 	-./$(EXE) +imem=$(PROG) +trace=rtl.trace $(ARGS) > rtl.dump
-	python3 cmptrace.py rtl.trace sim.trace
+	python3 cmp_trace.py rtl.trace sim.trace
 
 # Windows の VS Code からは WSL の /usr/share/verilator が見えにくいので、リポジトリ内にコピーしておく
 ide:
